@@ -59,17 +59,29 @@ class EloRanker
     end
   end
 
-  def comparison(item_a = @items.sample, item_b = @items.sample)
-    item_b = @items.sample while item_a == item_b
+  def comparison(item_a = @items.sample, item_b = nil)
+    item_b = get_selective_pairing(item_a) while item_b.nil? || item_a == item_b
       
     print_items(item_a, item_b)
     winner = get_number_input(0, 1)
 
     @elo.adjust_rating(item_a, item_b, winner)
+    @items.sort! { |a, b| b.rating <=> a.rating}
+  end
+
+  def get_selective_pairing(curr_item)
+    curr_item_rank = @items.find_index(curr_item)
+    i = -1
+    pairing_range = Math.sqrt(@items.length).ceil
+    paired_items = @items.select do |item|
+      i += 1
+      (i.between?(curr_item_rank - pairing_range, curr_item_rank + pairing_range) ||
+      Random.new.rand(1.0) < 0.02) && i != curr_item_rank
+    end
+    paired_items.sample
   end
 
   def view_ratings
-    @items.sort! { |a, b| b.rating <=> a.rating}
     @items.each_with_index { |item, i| puts "(#{i + 1}) #{item.to_s}" }
   end
 
@@ -129,8 +141,6 @@ class EloRanker
   end
 
   def save
-    @items.sort! { |a, b| b.rating <=> a.rating}
-
     CSV.open(@current_file_path, "w") do |csv|
       csv << ['name', 'rating']
       @items.each do |item|
@@ -140,6 +150,3 @@ class EloRanker
   end
 
 end
-
-e = EloRanker.new
-e.run
